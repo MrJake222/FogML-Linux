@@ -26,7 +26,7 @@ extern "C" {
 
 // DIGITAL SIGNAL PROCESSING
 // number of features - depends on the DSP blocks
-#define FOGML_VECTOR_SIZE ((TINYML_DSP_BASE_LEN + TINYML_DSP_ENERGY_LEN + TINYML_DSP_CROSSINGS_LEN) * ACC_AXIS)
+#define FOGML_VECTOR_SIZE ((TINYML_DSP_BASE_LEN + TINYML_DSP_ENERGY_LEN + TINYML_DSP_CROSSINGS_LEN + TINYML_DSP_FFT_LEN) * ACC_AXIS)
 
 //BLOCK 1 - BASE
 tinyml_block_base_config_t block1_config;
@@ -45,20 +45,30 @@ tinyml_dsp_block_t block2 = {
 
 //BLOCK 3 - CROSSINGS
 tinyml_block_crossings_config_t block3_config = {
-    .threshold = 0.01
+    .threshold = 0.01f
 };
 tinyml_dsp_block_t block3 = {
     .type = TINYML_DSP_CROSSINGS,
     .config = &block3_config
 };
 
+//BLOCK 4 - FFT
+tinyml_block_fft_config_t block4_config = {
+    .freq = 119,
+    .treshold = 0.01
+};
+tinyml_dsp_block_t block4 = {
+    .type = TINYML_DSP_FFT,
+    .config = &block4_config
+};
+
 //DSP config
-tinyml_dsp_block_t *blocks_tab[] = {&block1, &block2, &block3};
+tinyml_dsp_block_t *blocks_tab[] = {&block1, &block2, &block3, &block4};
 
 tinyml_dsp_config_t my_dsp_config = {
     .time_ticks = ACC_TIME_TICKS,    
     .axis_n = 3,
-    .blocks_num = 3,
+    .blocks_num = 4,
     .blocks = blocks_tab
 };
 
@@ -137,16 +147,15 @@ void fogml_processing(float *time_series_data, float *score) {
     free(vector);
 } 
 
-void fogml_classification(float *time_series_data) {
+void fogml_classification(float *time_series_data, int* cl) {
     float *vector = (float*)malloc(sizeof(float) * FOGML_VECTOR_SIZE);
     tinyml_dsp(time_series_data, vector, &my_dsp_config);
-    int cl;
+    *cl = classifier(vector);
 
-    cl = classifier(vector);
 
 #ifdef FOGML_VERBOSE
     fogml_printf("Detected  class = ");
-    fogml_printf_int(cl);
+    fogml_printf_int(*cl);
     fogml_printf("\n");
 #endif
 
